@@ -1,6 +1,7 @@
 v0.7.0
   * Fix interpretation of `raquote` data with alpha channel.
   * Add support for showing overlays on top of images.
+  * Use `euclid` for (public) geometric types.
   * Fold consecutive mouse move events to reduce number of events.
 
 v0.6.2

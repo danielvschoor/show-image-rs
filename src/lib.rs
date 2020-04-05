@@ -77,6 +77,7 @@
 //! # Result::<(), String>::Ok(())
 //! ```
 
+pub use euclid;
 pub use keyboard_types::Code as ScanCode;
 pub use keyboard_types::Key as KeyCode;
 pub use keyboard_types::KeyState;
@@ -95,6 +96,12 @@ pub use backend::*;
 pub use features::*;
 pub use image_info::*;
 pub use event::*;
+
+/// Unit indicating pixels, used for 2D geometric types.
+pub struct Pixel;
+
+/// 2D rectangle in image space.
+pub type Rectangle = euclid::Rect<i32, Pixel>;
 
 /// Error that can occur while waiting for a key press.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
@@ -146,42 +153,6 @@ pub struct Image {
 
 	/// The name of the image.
 	pub name: String,
-}
-
-/// A rectangle.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
-pub struct Rectangle {
-	x: i32,
-	y: i32,
-	width: u32,
-	height: u32
-}
-
-impl Rectangle {
-	/// Create a rectangle from X, Y coordinates and the width and height.
-	pub fn from_xywh(x: i32, y: i32, width: u32, height: u32) -> Self {
-		Self { x, y, width, height }
-	}
-
-	/// Get the X location of the rectangle.
-	pub fn x(&self) -> i32 {
-		self.x
-	}
-
-	/// Get the Y location of the rectangle.
-	pub fn y(&self) -> i32 {
-		self.y
-	}
-
-	/// Get the width of the rectangle.
-	pub fn width(&self) -> u32 {
-		self.width
-	}
-
-	/// Get the height of the rectangle.
-	pub fn height(&self) -> u32 {
-		self.height
-	}
 }
 
 /// Options for creating a window.

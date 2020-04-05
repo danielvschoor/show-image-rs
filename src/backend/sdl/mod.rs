@@ -602,28 +602,12 @@ impl ContextInner {
 	}
 }
 
-impl<'a> From<&'a SdlRect> for Rectangle {
-	fn from(other: &'a SdlRect) -> Self {
-		Self::from_xywh(other.x(), other.y(), other.width(), other.height())
-	}
+fn from_sdl_rect(other: &SdlRect) -> Rectangle {
+	euclid::rect(other.x, other.y, other.width() as i32, other.height() as i32)
 }
 
-impl From<SdlRect> for Rectangle {
-	fn from(other: SdlRect) -> Self {
-		(&other).into()
-	}
-}
-
-impl<'a> From<&'a Rectangle> for SdlRect {
-	fn from(other: &'a Rectangle) -> Self {
-		Self::new(other.x(), other.y(), other.width(), other.height())
-	}
-}
-
-impl From<Rectangle> for SdlRect {
-	fn from(other: Rectangle) -> Self {
-		(&other).into()
-	}
+fn to_sdl_rect(other: &Rectangle) -> SdlRect {
+	SdlRect::new(other.min_x(), other.min_y(), other.width() as u32, other.height() as u32)
 }
 
 impl WindowInner {
@@ -640,10 +624,10 @@ impl WindowInner {
 	pub fn image_area(&self) -> Option<Rectangle> {
 		let (_texture, image_size) = self.texture.as_ref()?;
 		if self.preserve_aspect_ratio {
-			let canvas_size = Rectangle::from(&self.canvas.viewport());
+			let canvas_size = from_sdl_rect(&self.canvas.viewport());
 			Some(compute_target_rect_with_aspect_ratio(image_size, &canvas_size))
 		} else {
-			Some(self.canvas.viewport().into())
+			Some(from_sdl_rect(&self.canvas.viewport()))
 		}
 	}
 
@@ -701,7 +685,7 @@ impl WindowInner {
 
 		let mut surface = Surface::from_data(data, info.width as u32, info.height as u32, info.row_stride as u32, pixel_format)
 			.map_err(|e| format!("failed to create surface for pixel data: {}", e))?;
-		let image_size = Rectangle::from(surface.rect());
+		let image_size = from_sdl_rect(&surface.rect());
 
 		if info.pixel_format == PixelFormat::Mono8 {
 			surface.set_palette(&self.mono_palette).map_err(|e| format!("failed to set monochrome palette on canvas: {}", e))?;
@@ -721,22 +705,22 @@ impl WindowInner {
 		// Redraw the image, if any.
 		if let Some((texture, image_size)) = &self.texture {
 			let image_area = if self.preserve_aspect_ratio {
-				compute_target_rect_with_aspect_ratio(&image_size, &self.canvas.viewport().into())
+				compute_target_rect_with_aspect_ratio(&image_size, &from_sdl_rect(&self.canvas.viewport()))
 			} else {
-				self.canvas.viewport().into()
+				from_sdl_rect(&self.canvas.viewport())
 			};
 
 			let scale_x = f64::from(image_area.width()) / f64::from(image_size.width());
 			let scale_y = f64::from(image_area.height()) / f64::from(image_size.height());
 
-			self.canvas.copy(&texture, None, SdlRect::from(&image_area))
+			self.canvas.copy(&texture, None, to_sdl_rect(&image_area))
 				.map_err(|e| format!("failed to draw image: {}", e))?;
 
 			for (i, (texture, size)) in self.overlays.iter().enumerate() {
 				// Draw overlays with the same scaling applied.
 				let dest_width = (f64::from(size.width()) * scale_x) as u32;
 				let dest_height = (f64::from(size.height()) * scale_y) as u32;
-				let dest_area = SdlRect::from(Rectangle::from_xywh(image_area.x(), image_area.y(), dest_width, dest_height));
+				let dest_area = SdlRect::new(image_area.min_x(), image_area.min_y(), dest_width, dest_height);
 				self.canvas.copy(&texture, None, SdlRect::from(dest_area))
 					.map_err(|e| format!("failed to draw overlay {}: {}", i, e))?;
 			}
@@ -873,12 +857,12 @@ fn compute_target_rect_with_aspect_ratio(source: &Rectangle, canvas: &Rectangle)
 	let scale_h = canvas_h / source_h;
 
 	if scale_w < scale_h {
-		let new_height = (source_h * scale_w).round() as u32;
+		let new_height = (source_h * scale_w).round() as i32;
 		let top = (canvas.height() - new_height) / 2;
-		Rectangle::from_xywh(canvas.x(), canvas.y() + top as i32, canvas.width(), new_height)
+		euclid::rect(canvas.min_x(), canvas.min_y() + top as i32, canvas.width(), new_height)
 	} else {
-		let new_width = (source_w * scale_h).round() as u32;
+		let new_width = (source_w * scale_h).round() as i32;
 		let left = (canvas.width() - new_width) / 2;
-		Rectangle::from_xywh(canvas.x() + left as i32, canvas.y(), new_width, canvas.height())
+		euclid::rect(canvas.min_x() + left as i32, canvas.min_y(), new_width, canvas.height())
 	}
 }
